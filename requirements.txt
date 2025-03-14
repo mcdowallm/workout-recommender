@@ -1,5 +1,5 @@
 numpy
-pandas>=2.0.0
+pandas
 matplotlib
 seaborn
 scikit-learn
