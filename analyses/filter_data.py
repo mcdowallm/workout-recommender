@@ -18,8 +18,8 @@ def filter_data(df, calories_min=0, calories_max=None, difficulty=None, equipmen
         df_filtered = df.loc[mask].copy()
         df_filtered = df_filtered[~df_filtered["Equipment Needed"].str.contains(equipment_exclude, case=False, na=False)]
         df.loc[mask] = df_filtered
-    df = df[df["Target Muscle Group"].str.contains(muscle_group, case=False, na=False)] if muscle_group != "None" else df
+    df = df[df["Target Muscle Group"].str.contains(muscle_group, case=False, na=False)] if muscle_group != "All" else df
     
     return df
-print(f"Filtered data: {filter_data(df, calories_min=100, calories_max=1000, difficulty="Beginner", equipment_include="None", equipment_exclude="None", muscle_group="Back").head()}")
+# print(f"Filtered data: {filter_data(df, calories_min=100, calories_max=1000, difficulty="Beginner", equipment_include="None", equipment_exclude="None", muscle_group="Back").head()}")
 
