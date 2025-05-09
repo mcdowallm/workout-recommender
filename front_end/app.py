@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import streamlit as st
 import pandas as pd
-
+import plotly.express as px
 
 
 # Add the parent directory to sys.path manually
@@ -20,7 +20,6 @@ if not os.path.isfile(progress_file):
     pd.DataFrame(columns=["date", "weight"]).to_csv(progress_file, index=False)
 df = pd.read_csv(csv_path)
 
-
 df["Burns Calories"] = pd.to_numeric(df["Burns Calories"], errors="coerce")
 
 from analyses.filter_data import filter_data
@@ -28,6 +27,7 @@ from analyses.nutrition_search import search_foods
 # from analyses.chatbot3 import load_chatbot, get_chatbot_response
 
 st.title("Personal Health Assistant")
+
 
 # Create tabs for the main interface and chat
 tab1, tab2, tab3, tab4 = st.tabs(["Workout Finder", "Calorie Chatbot", "Nutition Calculator", "Personal Tracker"])
@@ -100,11 +100,11 @@ with tab3:
         with prev_col:
             if st.button("← Previous", key="prev") and st.session_state.page_index > 0:
                 st.session_state.page_index -= 1
-        with mid_col:
-            st.write(f"Page {st.session_state.page_index+1} of {num_pages}")
         with next_col:
             if st.button("Next →", key="next") and st.session_state.page_index < num_pages - 1:
                 st.session_state.page_index += 1
+        with mid_col:
+            st.write(f"Page {st.session_state.page_index+1} of {num_pages}")
 
         # slice for current page
         start = st.session_state.page_index * PAGE_SIZE
@@ -113,7 +113,7 @@ with tab3:
 
         
 
-        # 3) Render each result as before
+        # Render each result as before
         for food in page_results:
             name = food.get("food_name", "")
             url = food.get("food_url", "#")
@@ -145,14 +145,14 @@ with tab3:
 
         
 
-        
-
+ 
 with tab4:
     st.header("Personal Tracker")
-    # — New Entry Form —
+    # New Entry Form 
     with st.form("progress_form"):
         date = st.date_input("Date", value=datetime.date.today())
         weight = st.number_input("Weight (lbs)", min_value=0.0, step=0.1)
+        calories_burned = st.number_input("Calories Burned", min_value=0, step=5)
         steps = st.number_input("Total Steps", min_value=0, step=10)
         sleep_time = st.number_input("Sleep Duration (hr)", min_value=0.0, step=0.5)
         submitted = st.form_submit_button("Add Entry")
@@ -166,7 +166,7 @@ with tab4:
             st.warning(f"You already entered data for {date.strftime('%m/%d/%Y')}.")
         else:
             # Append new entry
-            df_progress.loc[len(df_progress)] = [date.isoformat(), weight, steps, sleep_time]
+            df_progress.loc[len(df_progress)] = [date.isoformat(), weight, calories_burned, steps, sleep_time]
             df_progress.to_csv(progress_file, index=False)
             st.success("Entry added!")
 
@@ -179,8 +179,9 @@ with tab4:
     display_df = pd.DataFrame({
         "Date": df_progress["date"].dt.strftime("%m/%d/%Y"),
         "Weight (lbs)": df_progress["weight"],
+        "Calories Burned": df_progress["calories_burned"],
         "Steps": df_progress["steps"],
-        "Sleep Duration": df_progress["sleep_time"]
+        "Sleep Duration": df_progress["sleep_time"],
     })
 
     st.subheader("Progress Data")
@@ -191,7 +192,7 @@ with tab4:
     # Build options by zipping the two series
     options = [
         f"{d} — {w} lbs"
-        for d, w, s, t in zip(display_df["Date"], display_df["Weight (lbs)"], display_df["Steps"], display_df["Sleep Duration"])
+        for d, w, c, s, t in zip(display_df["Date"], display_df["Weight (lbs)"], display_df["Calories Burned"], display_df["Steps"], display_df["Sleep Duration"])
     ]
     to_delete = st.multiselect("Entries to remove", options)
 
@@ -205,6 +206,7 @@ with tab4:
         df_progress = df_progress[keep_mask].reset_index(drop=True)
         df_progress.to_csv(progress_file, index=False)
         st.success(f"Deleted {len(to_delete)} entr{'y' if len(to_delete)==1 else 'ies'}.")
+        st.rerun()
 
         # Reload and re-display
         df_progress["date"] = pd.to_datetime(df_progress["date"])
@@ -212,29 +214,28 @@ with tab4:
         display_df = pd.DataFrame({
             "Date": df_progress["date"].dt.strftime("%m/%d/%Y"),
             "Weight (lbs)": df_progress["weight"],
+            "Calories Burned": df_progress["calories_burned"],
             "Steps": df_progress["steps"],
             "Sleep Duration": df_progress["sleep_time"]
         })
         st.dataframe(display_df, use_container_width=True)
-
-    # — Plot Weight Over Time —
-    fig, ax = plt.subplots()
-    dates = df_progress["date"]
-    weights = df_progress["weight"]
-
-    ax.plot(dates, weights, marker="o")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Weight (lbs)")
-    ax.set_title("Weight Over Time")
-
-    # 1 day margin on each end
-    ax.margins(x=0.05)
-
-    # Tick exactly at each date
-    ax.set_xticks(dates)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d/%Y"))
-
-    # Rotate for readability
-    fig.autofmt_xdate()
-
-    st.pyplot(fig)
+    values = ["date", "weight", "calories_burned", "steps", "sleep_time"]
+    x_metric = st.selectbox(
+        "Select the x value:",
+        values
+    )
+    values.remove(x_metric)
+    y_metric = st.selectbox(
+        "Select the y value:",
+        values
+    )
+    if not df_progress.empty:
+        fig = px.line(
+            df_progress,
+            x=x_metric,
+            y=y_metric,
+            title=f"{y_metric.capitalize()} Over {x_metric.capitalize()}",
+            markers=True,
+            labels={x_metric: x_metric.capitalize(), y_metric: y_metric.capitalize()}
+        )
+        st.plotly_chart(fig, use_container_width=True)
