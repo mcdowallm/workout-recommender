@@ -342,41 +342,41 @@ with tab3:
                 if pd.notna(desc) and desc.strip():
                     st.write(desc)
 
-        # 6) Recipe‑Based Meal Plan
-        st.subheader("🍽️ Recipe Plan")
+        # # 6) Recipe‑Based Meal Plan
+        # st.subheader("🍽️ Recipe Plan")
 
-        # calories per meal ≈ 1/3 of the daily goal
-        meal_cals = st.session_state.daily_cals / 3
-        cal_min   = max(int(meal_cals - 600), 0)
-        cal_max   = int(meal_cals + 800)
-        st.markdown(f"Looking for a recipe between **{cal_min}–{cal_max} kcal** per serving…")
+        # # calories per meal ≈ 1/3 of the daily goal
+        # meal_cals = st.session_state.daily_cals / 3
+        # cal_min   = max(int(meal_cals - 600), 0)
+        # cal_max   = int(meal_cals + 800)
+        # st.markdown(f"Looking for a recipe between **{cal_min}–{cal_max} kcal** per serving…")
 
-        # Perform the search once
-        recipes = search_recipes_by_calories(
-            cal_min=cal_min,
-            cal_max=cal_max,
-            # max_results=5,
-            # sort_by="calories"
-        )
+        # # Perform the search once
+        # recipes = search_recipes_by_calories(
+        #     cal_min=cal_min,
+        #     cal_max=cal_max,
+        #     # max_results=5,
+        #     # sort_by="calories"
+        # )
 
-        if not recipes:
-            st.warning("No recipes found in that calorie range.")
-        else:
-            # pick one recipe at random
-            rec = random.choice(recipes)
-            # details = get_recipe_details(rec["id"])
+        # if not recipes:
+        #     st.warning("No recipes found in that calorie range.")
+        # else:
+        #     # pick one recipe at random
+        #     rec = random.choice(recipes)
+        #     # details = get_recipe_details(rec["id"])
 
-            # # Display it
-            # st.markdown(f"### [{details['name']}]({details['url']})")
-            # st.markdown("**Ingredients:**")
-            # for ing in details["ingredients"]:
-            #     st.write(f"- {ing}")
+        #     # # Display it
+        #     # st.markdown(f"### [{details['name']}]({details['url']})")
+        #     # st.markdown("**Ingredients:**")
+        #     # for ing in details["ingredients"]:
+        #     #     st.write(f"- {ing}")
 
-            # if details.get("directions"):
-            #     st.markdown("**Instructions:**")
-            #     st.write(details["directions"])
+        #     # if details.get("directions"):
+        #     #     st.markdown("**Instructions:**")
+        #     #     st.write(details["directions"])
 
-            # if details.get("nutrition"):
-            #     st.markdown("**Nutrition per serving:**")
-            #     for nut, val in details["nutrition"].items():
-            #         st.write(f"- {nut}: {val}")
+        #     # if details.get("nutrition"):
+        #     #     st.markdown("**Nutrition per serving:**")
+        #     #     for nut, val in details["nutrition"].items():
+        #     #         st.write(f"- {nut}: {val}")
