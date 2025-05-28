@@ -10,3 +10,4 @@ fatsecret
 rauth
 plotly
 kagglehub
+requests_oauthlib
