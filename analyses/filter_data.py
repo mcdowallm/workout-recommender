@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import re
 
-# Get the absolute path to the CSV file
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 csv_path = os.path.join(BASE_DIR, "../data/processed/exercises_cleaned.csv")
 
