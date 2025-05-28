@@ -77,7 +77,6 @@ with tab1:
         muscle_group = "All"
     else:
         muscle_group = selected_muscles
-    print(muscle_group)
 
     # Run the filter function when the user interacts
     if st.button("Find Workouts"):
