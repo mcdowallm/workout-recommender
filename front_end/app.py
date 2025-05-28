@@ -5,6 +5,8 @@ import matplotlib.dates as mdates
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import random
+
 
 
 # Add the parent directory to sys.path manually
@@ -24,13 +26,25 @@ df["Burns Calories"] = pd.to_numeric(df["Burns Calories"], errors="coerce")
 
 from analyses.filter_data import filter_data
 from analyses.nutrition_search import search_foods
+from analyses.recipe_search import search_recipes_by_calories
+from analyses.ai_chatbot import (
+    get_workout_plan,
+    calculate_daily_calories,
+    get_meal_plan,
+    calculate_bmi,
+)
 # from analyses.chatbot3 import load_chatbot, get_chatbot_response
 
 st.title("Personal Health Assistant")
 
 
 # Create tabs for the main interface and chat
-tab1, tab2, tab3, tab4 = st.tabs(["Workout Finder", "Calorie Chatbot", "Nutition Calculator", "Personal Tracker"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Workout Finder",
+    "Nutrition Calculator",
+    "AI Fitness Plan",
+    "Personal Tracker"
+])
 
 with tab1:
     st.header("Exercise Recommender")
@@ -63,17 +77,10 @@ with tab1:
             st.warning("No workouts found for the selected criteria. Try adjusting the filters!")
 
 # # -------------------------
-# # Calorie Advice Chatbot Section
-# # -------------------------
-with tab2:
-    st.header("Nutritional Assistant")
-    st.write("Ask any question about nutrition, calories, or dietary advice:")
-
-# # -------------------------
 # # Calorie Advice API Section
 # # -------------------------
 
-with tab3:
+with tab2:
     st.header("Nutrition Calculator")
 
     # 1) Input & Search Trigger
@@ -142,8 +149,6 @@ with tab3:
                 st.markdown(f"[More info ➞]({url})", unsafe_allow_html=True)
 
         st.markdown("---")
-
-        
 
  
 with tab4:
@@ -239,3 +244,119 @@ with tab4:
             labels={x_metric: x_metric.capitalize(), y_metric: y_metric.capitalize()}
         )
         st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
+with tab3:
+    st.header("AI Fitness Plan")
+
+    st.markdown("Fill in your details to get a personalized workout & meal plan:")
+
+    # 1) Collect user profile
+    col1, col2 = st.columns(2)
+    with col1:
+        weight_lbs = st.number_input("Weight (lbs)", min_value=1.0, step=0.1, value=130.0)
+        height_in = st.number_input("Height (in)", min_value=20.0, step=0.5, value=65.0)
+        age       = st.number_input("Age", min_value=10, max_value=120, value=30)
+    with col2:
+        gender = st.selectbox("Gender", ["male","female"])
+        activity_level = st.selectbox("Activity Level", [
+            "sedentary", "light", "moderate", "active", "very active"
+        ],
+        help="""
+        **sedentary**: little or no exercise  
+        **light**: exercise 1-3 days/week  
+        **moderate**: exercise 3-5 days/week  
+        **active**: exercise 6-7 days/week  
+        **very active**: hard exercise daily or physical job
+        """)
+        goal = st.selectbox("Goal", ["maintenance","muscle gain","fat loss"])
+
+    # 2) Workout preferences
+    st.subheader("Workout Preferences")
+    
+    body_options = ['Abdominals', 'Adductors', 'Abductors', 'Biceps', 'Calves', 'Chest', 'Forearms', 'Glutes', 
+    'Hamstrings', 'Lats', 'Lower Back', 'Middle Back', 'Traps', 'Neck', 'Quadriceps', 'Shoulders', 'Triceps']
+    selected_parts = st.multiselect(
+        "Body Parts (select one or more):",
+        options=body_options,
+        default=["Abdominals"]
+    )
+    # Join them into the format your helper expects:
+    body_parts = " and ".join(selected_parts) if selected_parts else None
+    workout_type = st.selectbox("Workout Type:", ['Strength', 'Plyometrics', 'Cardio', 'Stretching', 'Powerlifting', 
+    'Strongman', 'Olympic Weightlifting'])
+
+    # 3) Trigger
+    if st.button("Generate Plan", key="gen"):
+        bmi = calculate_bmi(weight_lbs, height_in)
+        daily_cals = calculate_daily_calories(
+        weight_lbs, height_in, age, gender, activity_level, bmi
+        )
+        plans = get_workout_plan(body_parts, workout_type)
+        meal_info = get_meal_plan(daily_cals, goal)
+
+        st.session_state.bmi         = bmi
+        st.session_state.daily_cals  = daily_cals
+        st.session_state.plans       = plans
+        st.session_state.meal_info   = meal_info
+        # clear any previous recipe search
+        st.session_state.pop("recipes", None)
+
+    # 2) If we have a plan in session_state, render it
+    if "daily_cals" in st.session_state:
+        st.metric("Your BMI", f"{st.session_state.bmi:.1f}")
+        st.metric("Daily Calorie Target", f"{st.session_state.daily_cals} kcal")
+
+        st.subheader("🏋️ Workout Plan")
+        for i, p in enumerate(st.session_state.plans, 1):
+            if p.get("message"):
+                st.info(p["message"])
+            else:
+                st.markdown(f"**{i}. {p['title']}**")
+                st.write(f"- Type: {p['type']}")
+                st.write(f"- Body Part: {p['body_part']}")
+                desc = p.get("description", "")
+                if pd.notna(desc) and desc.strip():
+                    st.write(desc)
+
+        # 6) Recipe‑Based Meal Plan
+        st.subheader("🍽️ Recipe Plan")
+
+        # calories per meal ≈ 1/3 of the daily goal
+        meal_cals = st.session_state.daily_cals / 3
+        cal_min   = max(int(meal_cals - 600), 0)
+        cal_max   = int(meal_cals + 800)
+        st.markdown(f"Looking for a recipe between **{cal_min}–{cal_max} kcal** per serving…")
+
+        # Perform the search once
+        recipes = search_recipes_by_calories(
+            cal_min=cal_min,
+            cal_max=cal_max,
+            # max_results=5,
+            # sort_by="calories"
+        )
+
+        if not recipes:
+            st.warning("No recipes found in that calorie range.")
+        else:
+            # pick one recipe at random
+            rec = random.choice(recipes)
+            # details = get_recipe_details(rec["id"])
+
+            # # Display it
+            # st.markdown(f"### [{details['name']}]({details['url']})")
+            # st.markdown("**Ingredients:**")
+            # for ing in details["ingredients"]:
+            #     st.write(f"- {ing}")
+
+            # if details.get("directions"):
+            #     st.markdown("**Instructions:**")
+            #     st.write(details["directions"])
+
+            # if details.get("nutrition"):
+            #     st.markdown("**Nutrition per serving:**")
+            #     for nut, val in details["nutrition"].items():
+            #         st.write(f"- {nut}: {val}")
